@@ -302,6 +302,7 @@ function render(){var ni=nowInfo();var y=window.scrollY;var a=document.activeEle
  if(st.sheet&&st.sheet.set&&st.sheetEl)openSet(st.sheet.set)}
 if(nowInfo().ymd===DATES.sun)st.day='sun';
 render();
+if(!st.me)openWho();
 setInterval(render,60000);
 window.addEventListener('online',flush);
 // ---- sync (ntfy.sh, public, no login)
