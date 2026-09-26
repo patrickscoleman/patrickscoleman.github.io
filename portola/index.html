@@ -118,6 +118,13 @@ a.blk{color:inherit;text-decoration:none}
 .popbg{position:absolute;inset:0;background:var(--scrim)}
 .pop .sheet{position:relative}
 .pop a.btn{text-decoration:none}
+.search{position:relative;margin-top:10px}
+.search input{width:100%;font:inherit;font-size:16px;padding:9px 36px 9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);-webkit-appearance:none;appearance:none}
+.search input::-webkit-search-cancel-button{display:none}
+.qx{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;font-size:18px;color:var(--mute)}
+.dayt{font-weight:800;color:var(--ink)}
+.blk.dim{opacity:.18}
+.static .search{display:none}
 .foot{max-width:680px;margin:0 auto;padding:18px 16px 36px;color:var(--mute);font-size:12px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .foot button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 12px;font-weight:700;font-size:14px;color:var(--ink)}
 .toast button{margin-left:12px;font-weight:800;text-decoration:underline;color:inherit}
@@ -171,7 +178,13 @@ function card(s,ni,full){var g=goingTo(s.id),mine=mySets().indexOf(s.id)>=0;
   el('button',{style:'text-align:left',onclick:function(){openSet(s.id)}},[n,meta,whos]),
   st.readonly?el('span'):el('button',{class:'tog'+(mine?' on':''),'aria-pressed':String(mine),'aria-label':(mine?'Leave ':'Join ')+s.n,onclick:function(){toggle(s.id)},text:mine?'Leave':'+ Join'})]));
  return li}
-function planView(ni){var sets=L[st.day];var f=st.filter;
+function norm(s){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
+function hit(s){return !st.q||norm(s.n+' '+SN[s.s]).indexOf(norm(st.q.trim()))>=0}
+function searchView(ni){var m=el('main');var res=L.sat.concat(L.sun).filter(hit);
+ m.appendChild(el('h2',{},['Results',el('span',{text:res.length+(res.length===1?' set':' sets')+', both days'})]));
+ if(!res.length)m.appendChild(el('p',{class:'empty',text:'No artist or stage matches \u201c'+st.q.trim()+'\u201d.'}));
+ m.appendChild(el('ol',{class:'list'},res.map(function(s){var li=card(s,ni);li.querySelector('.meta').insertBefore(el('span',{class:'dayt',text:s.d==='sat'?'Sat':'Sun'}),li.querySelector('.meta').firstChild);return li})));return m}
+function planView(ni){if(st.q&&st.q.trim())return searchView(ni);var sets=L[st.day];var f=st.filter;
  var picked=sets.filter(function(s){var g=goingTo(s.id);return f==='all'?g.length:g.some(function(p){return p.k===f})});
  var rest=sets.filter(function(s){return picked.indexOf(s)<0});
  var m=el('main');
@@ -192,7 +205,7 @@ function gridView(ni){var m=el('main');var sets=L[st.day];var mine=mySets();
  STAGES.forEach(function(sg){var c=el('div',{class:'col st-'+sg[0]});
   sets.filter(function(s){return s.s===sg[0]}).forEach(function(s){var n=goingTo(s.id).length,me=mine.indexOf(s.id)>=0;
    var hgt=(s.b-s.a)*PX-3;
-   c.appendChild(el(st.static?'a':'button',{'data-id':s.id,href:st.static?'#x-'+s.id:null,class:'blk'+(me?' mine':n?' others':'')+(isPast(s,ni)?' past':''),style:'top:'+((s.a-START)*PX+5)+'px;height:'+hgt+'px','aria-label':s.n+' '+fmt(s.a)+' to '+fmt(s.b)+', '+n+' going',onclick:st.static?null:function(){openSet(s.id)}},[
+   c.appendChild(el(st.static?'a':'button',{'data-id':s.id,href:st.static?'#x-'+s.id:null,class:'blk'+(me?' mine':n?' others':'')+(st.q&&st.q.trim()&&!hit(s)?' dim':'')+(isPast(s,ni)?' past':''),style:'top:'+((s.a-START)*PX+5)+'px;height:'+hgt+'px','aria-label':s.n+' '+fmt(s.a)+' to '+fmt(s.b)+', '+n+' going',onclick:st.static?null:function(){openSet(s.id)}},[
     el('span',{class:'bn',text:s.s==='desp'?'Despacio':s.n}),el('span',{class:'bt',text:fmt(s.a)+'–'+fmt(s.b)}),n?el('span',{class:'bc',text:(me?'You'+(n>1?' +'+(n-1):''):n+' going')}):null]))});
   g.appendChild(c)});
  if(DATES[st.day]===ni.ymd&&ni.m>=START&&ni.m<=END)g.appendChild(el('div',{class:'nowline',style:'top:'+((ni.m-START)*PX+4)+'px'}));
@@ -212,7 +225,9 @@ function header(){var ps=people();
  top.appendChild(el('div',{class:'ctrls'},[
   el('div',{class:'seg'},[segb(st.day==='sat','Sat',function(){st.day='sat';render()},'26'),segb(st.day==='sun','Sun',function(){st.day='sun';render()},'27')]),
   el('div',{class:'seg'},[segb(st.view==='plan','Plan',function(){st.view='plan';ls('portola-view','plan');render()}),segb(st.view==='grid','Grid',function(){st.view='grid';ls('portola-view','grid');render()}),el('button',{'aria-pressed':String(st.view==='chat'),onclick:function(){st.view='chat';ls('portola-view','chat');render()}},['Chat',unread()?el('span',{class:'badge',text:String(unread())}):null])])]));
- if(st.view==='plan')top.appendChild(el('div',{class:'chips'},[el('button',{class:'chip','aria-pressed':String(st.filter==='all'),onclick:function(){st.filter='all';render()},text:'Everyone'})].concat(ps.map(function(p){return el('button',{class:'chip','aria-pressed':String(st.filter===p.k),onclick:function(){st.filter=p.k;render()},text:p.name})}))));
+ if(st.view!=='chat'){var qi=el('input',{id:'q',type:'search',placeholder:'Search artists or stages',autocomplete:'off',enterkeyhint:'search','aria-label':'Search artists or stages',oninput:function(){st.q=qi.value;render()}});qi.value=st.q||'';
+  top.appendChild(el('div',{class:'search'},[qi,st.q?el('button',{class:'qx','aria-label':'Clear search',onclick:function(){st.q='';render()},text:'\u00d7'}):null]))}
+ if(st.view==='plan'&&!(st.q&&st.q.trim()))top.appendChild(el('div',{class:'chips'},[el('button',{class:'chip','aria-pressed':String(st.filter==='all'),onclick:function(){st.filter='all';render()},text:'Everyone'})].concat(ps.map(function(p){return el('button',{class:'chip','aria-pressed':String(st.filter===p.k),onclick:function(){st.filter=p.k;render()},text:p.name})}))));
  return top}
 function clashes(s){var mine=mySets();return mine.map(function(id){return BY[id]}).filter(function(o){return o&&o.id!==s.id&&o.d===s.d&&o.a<s.b&&s.a<o.b})}
 function sheet(content,sc){close();var sc_=el('div',{class:'scrim',onclick:function(e){if(e.target===sc_)close()}},[el('div',{class:'sheet'+(sc?' st-'+sc:''),role:'dialog','aria-modal':'true'},content)]);document.body.appendChild(sc_);st.sheetEl=sc_;var b=sc_.querySelector('button');if(b)b.focus()}
@@ -241,7 +256,7 @@ function yourself(){var me=st.me,name=myName()||me,box=el('div',{class:'mebox'})
  base();return box}
 function offlineCopy(){var ps=people(),keep={day:st.day,filter:st.filter,open:st.openRest},ni={ymd:'',m:0};
  var esc=function(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')};
- st.filter='all';st.openRest=false;
+ st.filter='all';st.openRest=false;var kq=st.q;st.q='';
  st.static=true;var body='<div class="app static">'+'<input type="radio" name="d" id="d-sat" checked><input type="radio" name="d" id="d-sun"><input type="radio" name="v" id="v-plan" checked><input type="radio" name="v" id="v-grid"><input type="radio" name="v" id="v-chat"><input type="radio" name="f" id="f-all" checked>'+ps.map(function(p){return '<input type="radio" name="f" id="f-'+p.k+'">'}).join('');
  var stamp=new Date().toLocaleString([], {weekday:'short',hour:'numeric',minute:'2-digit'});
  body+='<header class="top"><div class="row"><div class="brand"><b>Portola 2026</b><span class="status"><i></i>Offline copy · saved '+esc(stamp)+'</span></div></div>'+
@@ -249,7 +264,7 @@ function offlineCopy(){var ps=people(),keep={day:st.day,filter:st.filter,open:st
   '<div class="chips"><label class="chip" for="f-all">Everyone</label>'+ps.map(function(p){return '<label class="chip" for="f-'+p.k+'">'+esc(p.name)+'</label>'}).join('')+'</div></header>';
  ['sat','sun'].forEach(function(d){st.day=d;body+='<section class="sd sd-'+d+'"><div class="vp">'+planView(ni).outerHTML+'</div><div class="vg">'+gridView(ni).outerHTML+'</div></section>'});
  var cm=allMsgs();body+='<main class="chat vc"><h2>Group chat<span>saved copy \u00b7 can\u2019t post</span></h2>'+(cm.length?msgList(cm).outerHTML:'<p class="empty">No messages yet.</p>')+'</main>';body=body.split('tap a set to join').join('names are in Plan');body+='<footer class="foot"><span>Times are PM. This saved copy can’t be edited. Open the live page when you have signal to change plans.</span></footer></div>';
- st.static=false;st.day=keep.day;st.filter=keep.filter;st.openRest=keep.open;
+ st.static=false;st.q=kq;st.day=keep.day;st.filter=keep.filter;st.openRest=keep.open;
  var css=document.getElementById('css').textContent+'.static{--hh:0px}.static .top{position:static}.static .tog,.static .legend+*{display:none}.static .t,.static .set>button{cursor:default}'+
   '.app>input{position:absolute;opacity:0;pointer-events:none}.seg label{flex:1;text-align:center;padding:7px 8px;border-radius:9px;font-weight:700;font-size:14px;white-space:nowrap;cursor:pointer}.chips label{cursor:pointer}'+
   '.app:has(#d-sat:checked) .sd-sun,.app:has(#d-sun:checked) .sd-sat,.app:has(#v-plan:checked) .vg,.app:has(#v-grid:checked) .vp,.app:has(#v-grid:checked) .chips,.app:has(#v-chat:checked) .sd,.app:has(#v-chat:checked) .chips,.app:has(#v-chat:checked) .ctrls .seg:first-child,.app:has(#v-plan:checked) .vc,.app:has(#v-grid:checked) .vc{display:none}'+
@@ -279,9 +294,9 @@ function chatView(){var m=el('main',{class:'chat'});var ms=allMsgs();
 function footer(){var f=el('footer',{class:'foot'});
  f.appendChild(el('span',{text:'Times are PM. Tap a set for details and who’s going. Taps sync to everyone when you have signal. Once opened, this page also works with no signal.'}));
   return f}
-function render(){var ni=nowInfo();var y=window.scrollY;var a=document.activeElement,foc=a&&a.id==='msg',sel=foc?[a.selectionStart,a.selectionEnd]:null;var app=document.getElementById('app');app.textContent='';
+function render(){var ni=nowInfo();var y=window.scrollY;var a=document.activeElement,fid=a&&(a.id==='msg'||a.id==='q')?a.id:null,foc=!!fid,sel=foc?[a.selectionStart,a.selectionEnd]:null;var app=document.getElementById('app');app.textContent='';
  app.appendChild(header());app.appendChild(st.view==='grid'?gridView(ni):st.view==='chat'?chatView():planView(ni));app.appendChild(footer());
- if(foc){var mi=document.getElementById('msg');if(mi){mi.focus({preventScroll:true});try{mi.setSelectionRange(sel[0],sel[1])}catch(e){}}}
+ if(foc){var mi=document.getElementById(fid);if(mi){mi.focus({preventScroll:true});try{mi.setSelectionRange(sel[0],sel[1])}catch(e){}}}
  var t=document.getElementById('top');if(t)document.documentElement.style.setProperty('--hh',t.offsetHeight+'px');
  window.scrollTo(0,y);
  if(st.sheet&&st.sheet.set&&st.sheetEl)openSet(st.sheet.set)}
